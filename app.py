@@ -67,12 +67,13 @@ def download():
     }
     
     if quality == 'mp3':
-        ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192'}]
+        ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(video_url, download=True)
         filename = ydl.prepare_filename(info)
-        if quality == 'mp3': filename = filename.rsplit('.', 1)[0] + '.mp3'
+        if quality == 'mp3':
+            filename = filename.rsplit('.', 1)[0] + '.mp3'
         return send_file(filename, as_attachment=True)
 
 # ডাউনলোড করা ফাইলগুলোর লিস্ট
