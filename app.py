@@ -5,7 +5,7 @@ import requests
 
 app = Flask(__name__)
 DOWNLOAD_FOLDER = 'downloads'
-YOUTUBE_API_KEY = "AIzaSy_ZB8TOSQViO5MYQAfYEnf-T9LlcuFks"  # API key
+YOUTUBE_API_KEY = "AIzaSy_ZB8TOSQViO5MYQAfYEnf-T9LlcuFks"
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
@@ -82,5 +82,6 @@ def get_downloads():
     return jsonify(files)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-                        
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+    
