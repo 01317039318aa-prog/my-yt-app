@@ -26,9 +26,7 @@
         .section { display: none; padding-top: 10px; }
         .section.active { display: block; }
 
-        video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
         .download-btn { border-radius: 50px; font-weight: bold; font-size: 12px; margin: 2px; }
-        
         .list-item { background: #222; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
     </style>
 </head>
@@ -49,7 +47,10 @@
     </div>
 
     <div id="playing-sec" class="section">
-        <video id="mainVideo" controls autoplay></video>
+        <div class="ratio ratio-16x9">
+            <iframe id="mainVideo" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+        
         <div class="p-3 mt-2 bg-dark rounded shadow">
             <h6 id="playTitle">No Video Selected</h6>
             <div class="d-flex flex-wrap mt-3">
@@ -115,31 +116,25 @@
     }
 
     async function playThis(url, title) {
-        // ইউটিউব শর্টস লিংক হলে সেটি ফুল ইউটিউব লিংকে রূপান্তর করা
         if (url.includes('shorts/')) {
             url = url.replace('shorts/', 'watch?v=');
         }
         
-        playingUrl = url;
-        showSection(document.querySelector('[onclick*="playing"]'), 'playing');
-        document.getElementById('playTitle').innerText = "Loading details...";
-        
-        const fd = new FormData();
-        fd.append('url', url);
-        
-        try {
-            const res = await fetch('/get_info', {method: 'POST', body: fd});
-            const data = await res.json();
-            
-            if (data.video_url) {
-                document.getElementById('mainVideo').src = data.video_url;
-                document.getElementById('playTitle').innerText = data.title;
-                addToHistory(data.title);
-            } else {
-                document.getElementById('playTitle').innerText = "Failed to load video! Try a normal video.";
+        // ভিডিও আইডি বের করা
+        let videoId = url.split('v=')[1];
+        if (videoId) {
+            if (videoId.includes('&')) {
+                videoId = videoId.split('&')[0];
             }
-        } catch (e) {
-            document.getElementById('playTitle').innerText = "Error loading from server!";
+            // ইউটিউবের এমবেড লিংক সোর্স হিসেবে সেট করা
+            document.getElementById('mainVideo').src = "https://www.youtube.com/embed/" + videoId;
+            document.getElementById('playTitle').innerText = title;
+            playingUrl = url;
+            
+            addToHistory(title);
+            showSection(document.querySelector('[onclick*="playing"]'), 'playing');
+        } else {
+            document.getElementById('playTitle').innerText = "Invalid Video URL";
         }
     }
 
