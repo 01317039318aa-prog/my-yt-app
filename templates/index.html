@@ -29,7 +29,6 @@
         video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
         .download-btn { border-radius: 50px; font-weight: bold; font-size: 12px; margin: 2px; }
         
-        /* History & Download List */
         .list-item { background: #222; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
     </style>
 </head>
@@ -88,7 +87,8 @@
     async function loadVideos(q, append = false) {
         document.getElementById('loader').style.display = "block";
         try {
-            const res = await fetch(`/search?q=${encodeURIComponent(q)}&pageToken=${nextPageTokenCheck(append)}`);
+            const token = append ? nextPageToken : "";
+            const res = await fetch(`/search?q=${encodeURIComponent(q)}&pageToken=${token}`);
             const data = await res.json();
             
             const feed = document.getElementById('video-feed');
@@ -106,7 +106,7 @@
                 });
                 nextPageToken = data.nextPageToken;
             } else {
-                feed.innerHTML = "<p class='text-center text-muted mt-4'>No videos found. Please try another search.</p>";
+                feed.innerHTML = "<p class='text-center text-muted mt-4'>No videos found. Try another search query.</p>";
             }
         } catch (e) {
             console.error("Error loading videos:", e);
@@ -114,26 +114,32 @@
         document.getElementById('loader').style.display = "none";
     }
 
-    function PageTokenCheck(append) {
-        return append ? nextPageToken : "";
-    }
-
     async function playThis(url, title) {
+        // ইউটিউব শর্টস লিংক হলে সেটি ফুল ইউটিউব লিংকে রূপান্তর করা
+        if (url.includes('shorts/')) {
+            url = url.replace('shorts/', 'watch?v=');
+        }
+        
         playingUrl = url;
         showSection(document.querySelector('[onclick*="playing"]'), 'playing');
         document.getElementById('playTitle').innerText = "Loading details...";
         
         const fd = new FormData();
         fd.append('url', url);
-        const res = await fetch('/get_info', {method: 'POST', body: fd});
-        const data = await res.json();
         
-        if (data.video_url) {
-            document.getElementById('mainVideo').src = data.video_url;
-            document.getElementById('playTitle').innerText = data.title;
-            addToHistory(data.title);
-        } else {
-            document.getElementById('playTitle').innerText = "Failed to load video!";
+        try {
+            const res = await fetch('/get_info', {method: 'POST', body: fd});
+            const data = await res.json();
+            
+            if (data.video_url) {
+                document.getElementById('mainVideo').src = data.video_url;
+                document.getElementById('playTitle').innerText = data.title;
+                addToHistory(data.title);
+            } else {
+                document.getElementById('playTitle').innerText = "Failed to load video! Try a normal video.";
+            }
+        } catch (e) {
+            document.getElementById('playTitle').innerText = "Error loading from server!";
         }
     }
 
