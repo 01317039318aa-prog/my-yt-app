@@ -6,7 +6,7 @@ import requests
 app = Flask(__name__)
 DOWNLOAD_FOLDER = 'downloads'
 
-# এনভায়রনমেন্ট ভ্যারিয়েবল থেকে API key লোড হবে, না পেলে ডিফল্ট হিসেবে আপনার দেওয়া কি ব্যবহার করবে
+# এনভায়রনমেন্ট ভ্যারিয়েবল থেকে API key লোড হবে
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "AIzaSyCd-akURm1bPYz-LZVGWm0bLcprGqqTBbk")
 
 if not os.path.exists(DOWNLOAD_FOLDER):
@@ -19,7 +19,7 @@ def index():
 # ইউটিউব ভিডিও সার্চ
 @app.route('/search')
 def search():
-    query = request.args.get('q', 'Bangla hit songs')
+    query = request.args.get('q', 'hit songs')
     page_token = request.args.get('pageToken', '')
     url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q={query}&type=video&pageToken={page_token}&key={YOUTUBE_API_KEY}"
     try:
@@ -39,6 +39,10 @@ def search():
 @app.route('/get_info', methods=['POST'])
 def get_info():
     video_url = request.form.get('url')
+    # ইউটিউব শর্টস লিংক হলে তা ফুল ভিডিও লিংকে কনভার্ট করা
+    if 'shorts/' in video_url:
+        video_url = video_url.replace('shorts/', 'watch?v=')
+        
     ydl_opts = {'quiet': True, 'noplaylist': True}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -55,6 +59,9 @@ def get_info():
 @app.route('/download')
 def download():
     video_url = request.args.get('url')
+    if 'shorts/' in video_url:
+        video_url = video_url.replace('shorts/', 'watch?v=')
+        
     quality = request.args.get('quality', '720p')
     
     q_map = {
