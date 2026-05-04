@@ -74,41 +74,53 @@
 </div>
 
 <div class="bottom-nav">
-    <button class="nav-btn active" onclick="showSection('home')"><i class="fas fa-home"></i>Home</button>
-    <button class="nav-btn" onclick="showSection('playing')"><i class="fas fa-play"></i>Playing</button>
-    <button class="nav-btn" onclick="showSection('history')"><i class="fas fa-history"></i>History</button>
-    <button class="nav-btn" onclick="showSection('download')"><i class="fas fa-download"></i>Downloads</button>
+    <button class="nav-btn active" onclick="showSection(this, 'home')"><i class="fas fa-home"></i>Home</button>
+    <button class="nav-btn" onclick="showSection(this, 'playing')"><i class="fas fa-play"></i>Playing</button>
+    <button class="nav-btn" onclick="showSection(this, 'history')"><i class="fas fa-history"></i>History</button>
+    <button class="nav-btn" onclick="showSection(this, 'download')"><i class="fas fa-download"></i>Downloads</button>
 </div>
 
 <script>
     let nextPageToken = "";
-    let currentQuery = "Bangla new songs";
+    let currentQuery = "hit songs";
     let playingUrl = "";
 
     async function loadVideos(q, append = false) {
         document.getElementById('loader').style.display = "block";
-        const res = await fetch(`/search?q=${q}&pageToken=${nextPageToken}`);
-        const data = await res.json();
-        
-        const feed = document.getElementById('video-feed');
-        if (!append) feed.innerHTML = "";
-        
-        data.videos.forEach(v => {
-            feed.innerHTML += `
-                <div class="col">
-                    <div class="v-card" onclick="playThis('${v.url}', '${v.title.replace(/'/g, "")}')">
-                        <img src="${v.thumbnail}">
-                        <div class="v-title">${v.title}</div>
-                    </div>
-                </div>`;
-        });
-        nextPageToken = data.nextPageToken;
+        try {
+            const res = await fetch(`/search?q=${encodeURIComponent(q)}&pageToken=${nextPageTokenCheck(append)}`);
+            const data = await res.json();
+            
+            const feed = document.getElementById('video-feed');
+            if (!append) feed.innerHTML = "";
+            
+            if (data.videos && data.videos.length > 0) {
+                data.videos.forEach(v => {
+                    feed.innerHTML += `
+                        <div class="col">
+                            <div class="v-card" onclick="playThis('${v.url}', '${v.title.replace(/'/g, "")}')">
+                                <img src="${v.thumbnail}">
+                                <div class="v-title">${v.title}</div>
+                            </div>
+                        </div>`;
+                });
+                nextPageToken = data.nextPageToken;
+            } else {
+                feed.innerHTML = "<p class='text-center text-muted mt-4'>No videos found. Please try another search.</p>";
+            }
+        } catch (e) {
+            console.error("Error loading videos:", e);
+        }
         document.getElementById('loader').style.display = "none";
+    }
+
+    function PageTokenCheck(append) {
+        return append ? nextPageToken : "";
     }
 
     async function playThis(url, title) {
         playingUrl = url;
-        showSection('playing');
+        showSection(document.querySelector('[onclick*="playing"]'), 'playing');
         document.getElementById('playTitle').innerText = "Loading details...";
         
         const fd = new FormData();
@@ -116,19 +128,23 @@
         const res = await fetch('/get_info', {method: 'POST', body: fd});
         const data = await res.json();
         
-        document.getElementById('mainVideo').src = data.video_url;
-        document.getElementById('playTitle').innerText = data.title;
-        addToHistory(data.title);
+        if (data.video_url) {
+            document.getElementById('mainVideo').src = data.video_url;
+            document.getElementById('playTitle').innerText = data.title;
+            addToHistory(data.title);
+        } else {
+            document.getElementById('playTitle').innerText = "Failed to load video!";
+        }
     }
 
-    function showSection(name) {
+    function showSection(element, name) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         
         document.getElementById(name + '-sec').classList.add('active');
-        event.currentTarget.classList.add('active');
+        element.classList.add('active');
         
-        if(name === 'download') loadDownloadFiles();
+        if (name === 'download') loadDownloadFiles();
     }
 
     async function loadDownloadFiles() {
@@ -148,18 +164,29 @@
 
     function handleSearch() {
         const val = document.getElementById('searchInput').value;
-        if(val.includes('http')) playThis(val, "Link Video");
-        else { currentQuery = val; nextPageToken = ""; loadVideos(val); showSection('home'); }
+        if (val.includes('http')) {
+            playThis(val, "Link Video");
+        } else {
+            currentQuery = val;
+            nextPageToken = "";
+            loadVideos(val);
+            showSection(document.querySelector('[onclick*="home"]'), 'home');
+        }
     }
 
     function startDownload(q) {
+        if (!playingUrl) {
+            return alert("দয়া করে আগে একটি ভিডিও প্লে করুন।");
+        }
         alert("ডাউনলোড শুরু হচ্ছে... দয়া করে অপেক্ষা করুন।");
         window.location.href = `/download?url=${encodeURIComponent(playingUrl)}&quality=${q}`;
     }
 
     window.onscroll = () => {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-            if(document.getElementById('home-sec').classList.contains('active')) loadVideos(currentQuery, true);
+            if (document.getElementById('home-sec').classList.contains('active')) {
+                loadVideos(currentQuery, true);
+            }
         }
     };
 
