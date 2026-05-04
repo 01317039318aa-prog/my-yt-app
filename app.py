@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
+from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import requests
@@ -23,7 +23,7 @@ def search():
     page_token = request.args.get('pageToken', '')
     url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q={query}&type=video&pageToken={page_token}&key={YOUTUBE_API_KEY}"
     try:
-        r = requests.get(url).json()
+        r = requests.get(url, timeout=5).json()
         videos = []
         for item in r.get('items', []):
             videos.append({
@@ -39,7 +39,8 @@ def search():
 @app.route('/get_info', methods=['POST'])
 def get_info():
     video_url = request.form.get('url')
-    # ইউটিউব শর্টস লিংক হলে তা ফুল ভিডিও লিংকে কনভার্ট করা
+    
+    # শর্টস (Shorts) লিঙ্ক হলে তা কনভার্ট করা
     if 'shorts/' in video_url:
         video_url = video_url.replace('shorts/', 'watch?v=')
         
@@ -59,6 +60,7 @@ def get_info():
 @app.route('/download')
 def download():
     video_url = request.args.get('url')
+    
     if 'shorts/' in video_url:
         video_url = video_url.replace('shorts/', 'watch?v=')
         
@@ -94,4 +96,4 @@ def get_downloads():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
+                       
