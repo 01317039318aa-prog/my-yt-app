@@ -6,8 +6,8 @@ import requests
 app = Flask(__name__)
 DOWNLOAD_FOLDER = 'downloads'
 
-# এনভায়রনমেন্ট ভ্যারিয়েবল থেকে API key লোড হবে, না পেলে ডিফল্ট কি ব্যবহার করবে
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "AIzaSy_ZB8TOSQViO5MYQAfYEnf-T9LlcuFks")
+# এনভায়রনমেন্ট ভ্যারিয়েবল থেকে API key লোড হবে, না পেলে ডিফল্ট হিসেবে আপনার দেওয়া কি ব্যবহার করবে
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "AIzaSyCd-akURm1bPYz-LZVGWm0bLcprGqqTBbk")
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
