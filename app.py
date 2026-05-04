@@ -1,6 +1,6 @@
+import os
 from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
-import os
 import requests
 
 app = Flask(__name__)
@@ -23,7 +23,7 @@ def search():
     page_token = request.args.get('pageToken', '')
     url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q={query}&type=video&pageToken={page_token}&key={YOUTUBE_API_KEY}"
     try:
-        r = requests.get(url, timeout=5).json()
+        r = requests.get(url, timeout=7).json()
         videos = []
         for item in r.get('items', []):
             videos.append({
@@ -40,21 +40,29 @@ def search():
 def get_info():
     video_url = request.form.get('url')
     
-    # শর্টস (Shorts) লিঙ্ক হলে তা কনভার্ট করা
     if 'shorts/' in video_url:
         video_url = video_url.replace('shorts/', 'watch?v=')
         
-    ydl_opts = {'quiet': True, 'noplaylist': True}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        try:
+    ydl_opts = {
+        'quiet': True,
+        'noplaylist': True,
+        'no_warnings': True,
+        'prefer_ffmpeg': False
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             formats = info.get('formats', [])
             
-            # ভালো কোয়ালিটির লিংক বের করা
-            play_url = next((f['url'] for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4'), info.get('url'))
+            # শুধুমাত্র স্ট্রিমযোগ্য MP4 ভিডিও ও অডিও ফরম্যাট বাছাই করা
+            play_url = next(
+                (f['url'] for f in formats if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4'), 
+                info.get('url')
+            )
             return jsonify({"title": info['title'], "video_url": play_url, "url": video_url})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ভিডিও ডাউনলোড
 @app.route('/download')
@@ -75,17 +83,21 @@ def download():
     ydl_opts = {
         'format': q_map.get(quality, 'best'),
         'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
+        'noplaylist': True,
     }
     
     if quality == 'mp3':
         ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(video_url, download=True)
-        filename = ydl.prepare_filename(info)
-        if quality == 'mp3':
-            filename = filename.rsplit('.', 1)[0] + '.mp3'
-        return send_file(filename, as_attachment=True)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+            filename = ydl.prepare_filename(info)
+            if quality == 'mp3':
+                filename = filename.rsplit('.', 1)[0] + '.mp3'
+            return send_file(filename, as_attachment=True)
+    except Exception as e:
+        return f"Download Error: {str(e)}", 500
 
 # ডাউনলোড করা ফাইলগুলোর লিস্ট
 @app.route('/get_downloads')
@@ -96,4 +108,4 @@ def get_downloads():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-                       
+    
